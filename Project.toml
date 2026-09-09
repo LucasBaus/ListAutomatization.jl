@@ -1,0 +1,13 @@
+name = "ListAutomatization"
+uuid = "6960b4ac-39e9-4f48-a95c-0bc15beefbb3"
+authors = ["LucasBaus <lucas.baussay.lb@gmail.com> and contributors"]
+version = "1.0.0-DEV"
+
+[compat]
+julia = "1.12"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
