@@ -31,7 +31,7 @@ module ListAutomatization
         return s
     end
 
-    function _main(entryFile::String ;template::String = "template.xlsx")
+    function _main(entryFile::String ;template::String = "template.xlsx", name_exitFile::String = "")
         template = "data/"*template
         df = DataFrame(XLSX.readtable(entryFile))
         for row in eachrow(df)
@@ -45,7 +45,7 @@ module ListAutomatization
             push!(L, TempAlphaInfo(letter, [(elt.nom, elt.colonne) for elt in eachrow(sub_df)], max(4, marginRow+size(sub_df, 1))))
         end
 
-        name_exitFile = "$(split(entryFile, ".xlsx")[1])_format.xlsx"
+        (name_exitFile == "") && name_exitFile = "$(split(entryFile, ".xlsx")[1])_format.xlsx"
         cp(template, name_exitFile, force=true)
 
         XLSX.openxlsx(name_exitFile, mode = "rw") do exit_file
@@ -82,13 +82,13 @@ module ListAutomatization
             # XLSX.setAlignment(exit_file, getcell(row, col); horizontal="center")
             # XLSX.setFill(exit_file, getcell(row, col); pattern = "solid", fgColor = "orange")
             # XLSX.setFont(exit_file, getcell(row, col); bold = true)
+
+            return name_exitFile
         end
     end
 
-    function julia_main()::Cint
-        println("Test")
-        println("Mes arguments : ", ARGS)
-        return _main(ARGS[1])
-        return 0
+    function main(args::Vector)
+        name_exitfile = length(args) > 1 ? args[2] : ""
+        return _main(args[1], name_exitFile = name_exitFile)
     end
 end
