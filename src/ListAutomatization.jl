@@ -45,8 +45,11 @@ module ListAutomatization
             push!(L, TempAlphaInfo(letter, [(elt.nom, elt.colonne) for elt in eachrow(sub_df)], max(4, marginRow+size(sub_df, 1))))
         end
 
-        (name_exitFile == "") && name_exitFile = "$(split(entryFile, ".xlsx")[1])_format.xlsx"
+        if name_exitFile == ""
+            name_exitFile = "$(split(entryFile, ".xlsx")[1])_format.xlsx"
+        end
         cp(template, name_exitFile, force=true)
+        println(name_exitFile)
 
         XLSX.openxlsx(name_exitFile, mode = "rw") do exit_file
             exit_file = exit_file[1]
@@ -82,13 +85,12 @@ module ListAutomatization
             # XLSX.setAlignment(exit_file, getcell(row, col); horizontal="center")
             # XLSX.setFill(exit_file, getcell(row, col); pattern = "solid", fgColor = "orange")
             # XLSX.setFont(exit_file, getcell(row, col); bold = true)
-
-            return name_exitFile
         end
+        return name_exitFile
     end
 
     function main(args::Vector)
-        name_exitfile = length(args) > 1 ? args[2] : ""
+        name_exitFile = length(args) > 1 ? args[2] : ""
         return _main(args[1], name_exitFile = name_exitFile)
     end
 end
