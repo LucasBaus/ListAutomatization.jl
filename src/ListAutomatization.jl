@@ -194,6 +194,7 @@ module ListAutomatization
         sort!(df, :nom)
 
         p_utilisateur = null_Parameter()
+        println("Avant Json update")
         json_update!(p_utilisateur, parameters)
 
         p_null = null_Parameter()
@@ -205,6 +206,7 @@ module ListAutomatization
             end
         end
 
+        println("Avant Parameter pruning")
         p_pruned = parameter_pruning(df, p_base, p_utilisateur, unfix_filednames)
 
 
@@ -221,8 +223,10 @@ module ListAutomatization
         end
         verbose && println(name_exitFile)
 
+        println("Avant cp")
         cp("data/TemplateNoMarge.xlsx", name_exitFile, force = true)
 
+        println("Avant création xlsx")
         XLSX.openxlsx(name_exitFile, mode = "rw") do exit_file
             exit_file = exit_file[1]
 
