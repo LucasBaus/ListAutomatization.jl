@@ -223,6 +223,10 @@ module ListAutomatization
         end
         verbose && println(name_exitFile)
 
+        if isfile(name_exitFile)
+            rm(name_exitFile, force = true)
+        end
+
         println("Avant cp")
         println(pwd())
         cp(joinpath(
@@ -230,9 +234,11 @@ module ListAutomatization
             "..",
             "data",
             "TemplateNoMarge.xlsx",
-        ), name_exitFile, force = true)
+        ), name_exitFile)
 
         println("Avant création xlsx")
+        println("FILE EXISTS: ", isfile(name_exitFile))
+        println("FILE WRITABLE: ", iswritable(name_exitFile))
         XLSX.openxlsx(name_exitFile, mode = "rw") do exit_file
             exit_file = exit_file[1]
 
@@ -317,6 +323,7 @@ module ListAutomatization
             println("Fin de la création du Excel")
         end
         println("Fin de _main")
+        println("FILE CLOSED")
         return name_exitFile
     end
 
