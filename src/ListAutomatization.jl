@@ -224,6 +224,7 @@ module ListAutomatization
         verbose && println(name_exitFile)
 
         println("Avant cp")
+        println(pwd())
         cp("data/TemplateNoMarge.xlsx", name_exitFile, force = true)
 
         println("Avant création xlsx")
