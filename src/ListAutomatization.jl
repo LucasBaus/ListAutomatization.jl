@@ -236,6 +236,8 @@ module ListAutomatization
             "TemplateNoMarge.xlsx",
         ), name_exitFile)
 
+        chmod(name_exitFile, 0o777)
+
         println("Avant création xlsx")
         println("FILE EXISTS: ", isfile(name_exitFile))
         println("FILE WRITABLE: ", iswritable(name_exitFile))
