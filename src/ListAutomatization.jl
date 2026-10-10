@@ -314,6 +314,7 @@ module ListAutomatization
             XLSX.setFill(exit_file, getcell(row, col); pattern = "solid", fgColor = "orange")
             verbose && println(row, col)
             XLSX.setFont(exit_file, getcell(row, col); bold = true)
+            println("Fin de la création du Excel")
         end
         println("Fin de _main")
         return name_exitFile
