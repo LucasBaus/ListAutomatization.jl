@@ -131,7 +131,7 @@ module ListAutomatization
             println("Try number: $cpt")
             # Ici, calcul de si ca passe, si oui, on prune, si non, on stop, on va voir pour le retour en arrière si stop après :)
 
-            maxRowCount = div(sheetHeight, p_final.cellHeight)
+            maxRowCount = div(sheetHeight, p_final.cellHeight+0.25)
             L = TempAlphaInfo[]
             for letter in alpha
                 sub_df = df[[elt[1] in letter for elt in df.nom], :]
