@@ -239,6 +239,9 @@ module ListAutomatization
         println("Avant création xlsx")
         println("FILE EXISTS: ", isfile(name_exitFile))
         println("FILE WRITABLE: ", iswritable(name_exitFile))
+        println("DIR WRITABLE: ", iswritable(dirname(name_exitFile)))
+        println("FILE READONLY: ", isreadonly(name_exitFile))
+        println("PERMISSIONS: ", stat(name_exitFile), "\n", "PERMISSIONS: ", uperm(name_exitFile))
         XLSX.openxlsx(name_exitFile, mode = "rw") do exit_file
             exit_file = exit_file[1]
 
