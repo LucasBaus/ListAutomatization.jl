@@ -308,7 +308,7 @@ module ListAutomatization
         return name_exitFile
     end
 
-    function main(args::Vector; json::String)
+    function main(args::Vector; json::String = "{}")
         name_exitFile = length(args) > 1 ? args[2] : ""
         return _main(args[1], name_exitFile = name_exitFile, parameters = json)
     end
