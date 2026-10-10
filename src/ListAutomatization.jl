@@ -186,7 +186,7 @@ module ListAutomatization
         return p_final
     end
 
-    function _main(entryFile::String ; name_exitFile::String = "", parameters::String="{}", verbose::Bool = false)
+    function _main(entryFile::String ; name_exitFile::String = "", parameters::String="{}", verbose::Bool = true)
         df = DataFrame(XLSX.readtable(entryFile))
         for row in eachrow(df)
             row.nom = uppercase(row.nom)
