@@ -14,7 +14,7 @@ module ListAutomatization
 
     function Parameter()
         return Parameter(
-            11.75,
+            12.,
             22.,
             4.,
             2.,
@@ -186,7 +186,7 @@ module ListAutomatization
         return p_final
     end
 
-    function _main(entryFile::String ; name_exitFile::String = "", parameters::String="{}", verbose::Bool = true)
+    function _main(entryFile::String ; name_exitFile::String = "", parameters::String="{}", verbose::Bool = false)
         df = DataFrame(XLSX.readtable(entryFile))
         for row in eachrow(df)
             row.nom = uppercase(row.nom)
@@ -207,7 +207,7 @@ module ListAutomatization
         end
 
         println("Avant Parameter pruning")
-        p_pruned = parameter_pruning(df, p_base, p_utilisateur, unfix_filednames)
+        p_pruned = parameter_pruning(df, p_base, p_utilisateur, unfix_filednames, verbose = verbose)
 
 
         maxRowCount = Int(div(sheetHeight, p_pruned.cellHeight))
@@ -243,7 +243,7 @@ module ListAutomatization
                 end
             end
 
-            XLSX.setRowHeight(exit_file, "A1:A$maxRowCount"; height=p_pruned.cellHeight)
+            XLSX.setRowHeight(exit_file, "A1:A$maxRowCount"; height=p_pruned.cellHeight-0.25)
             XLSX.setColumnWidth(exit_file, getcell(1, 1); width=p_pruned.cellNameLength)
             XLSX.setColumnWidth(exit_file, getcell(1, 3); width=p_pruned.cellNameLength)
             XLSX.setColumnWidth(exit_file, getcell(1, 5); width=p_pruned.cellNameLength)
@@ -315,11 +315,12 @@ module ListAutomatization
             verbose && println(row, col)
             XLSX.setFont(exit_file, getcell(row, col); bold = true)
         end
+        println("Fin de _main")
         return name_exitFile
     end
 
-    function main(args::Vector; json::String = "{}")
+    function main(args::Vector; json::String = "{}", verbose::Bool = false)
         name_exitFile = length(args) > 1 ? args[2] : ""
-        return _main(args[1], name_exitFile = name_exitFile, parameters = json)
+        return _main(args[1], name_exitFile = name_exitFile, parameters = json, verbose = verbose)
     end
 end
