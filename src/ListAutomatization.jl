@@ -225,7 +225,12 @@ module ListAutomatization
 
         println("Avant cp")
         println(pwd())
-        cp("data/TemplateNoMarge.xlsx", name_exitFile, force = true)
+        cp(joinpath(
+            @__DIR__,
+            "..",
+            "data",
+            "TemplateNoMarge.xlsx",
+        ), name_exitFile, force = true)
 
         println("Avant création xlsx")
         XLSX.openxlsx(name_exitFile, mode = "rw") do exit_file
