@@ -76,7 +76,7 @@ module ListAutomatization
             println(k)
             if k == :rowNameNumber
                 println("In row name number")
-                p.cellHeight.value = round(sheetHeight/parse(Int, v), digits = 2)
+                p.cellHeight.value = round(sheetHeight/(parse(Int, v)+3), digits = 2)
                 p.cellHeight.enabled = true
                 println(p.cellHeight)
             elseif k in fieldnames(Parameter)
