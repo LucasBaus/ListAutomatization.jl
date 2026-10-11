@@ -72,7 +72,6 @@ module ListAutomatization
 
     # Ensuite ici, une fonction modifiant un paramètre en fonction d'un JSON
     function json_update!(p::Parameter, json::String)
-        json = JSON3.parse(json)
         for (k, v) in json
             println(k)
             if k == :rowNameNumber
@@ -221,7 +220,7 @@ module ListAutomatization
         return p_final
     end
 
-    function _main(entryFile::String ; name_exitFile::String = "", parameters::String="{}", verbose::Bool = false)
+    function _main(entryFile::String ; name_exitFile::String = "", parameters::JSON3.Object = JSON3.Object(), verbose::Bool = false)
         df = DataFrame(XLSX.readtable(entryFile))
         for row in eachrow(df)
             row.nom = uppercase(row.nom)
@@ -358,7 +357,7 @@ module ListAutomatization
         return name_exitFile
     end
 
-    function main(args::Vector; json::String = "{}", verbose::Bool = false)
+    function main(args::Vector; json::JSON3.Object = JSON3.Object(), verbose::Bool = false)
         name_exitFile = length(args) > 1 ? args[2] : ""
         return _main(args[1], name_exitFile = name_exitFile, parameters = json, verbose = verbose)
     end
