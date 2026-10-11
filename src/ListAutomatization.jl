@@ -1,17 +1,42 @@
 module ListAutomatization
     using XLSX, DataFrames, JSON3
 
-    mutable struct Parameter
-        cellHeight::Float64
-        cellNameLength::Float64
-        cellColLength::Float64
-        cellMarginLength::Float64
-        cellTrashLength::Float64
-        withTrash::Bool
 
-        marginRow::Int
+    mutable struct ParameterValue{T}
+        value::T
+        enabled::Bool
     end
 
+    struct Parameter
+        cellHeight::ParameterValue{Float64}
+        cellNameLength::ParameterValue{Float64}
+        cellColLength::ParameterValue{Float64}
+        cellMarginLength::ParameterValue{Float64}
+        cellTrashLength::ParameterValue{Float64}
+        withTrash::ParameterValue{Bool}
+
+        marginRow::ParameterValue{Int}
+    end
+
+    const sheetWidth = 190
+    const sheetHeight = 830
+
+    function ParameterValue{T}(value::T) where T<: Any
+        return ParameterValue{T}(value, false)
+    end
+
+    function Parameter(cellHeight::Float64, cellNameLength::Float64, cellColLength::Float64, cellMarginLength::Float64, cellTrashLength::Float64, withTrash::Bool, marginRow::Int)
+        return Parameter(
+            ParameterValue{Float64}(cellHeight),
+            ParameterValue{Float64}(cellNameLength),
+            ParameterValue{Float64}(cellColLength),
+            ParameterValue{Float64}(cellMarginLength),
+            ParameterValue{Float64}(cellTrashLength),
+            ParameterValue{Bool}(withTrash),
+            ParameterValue{Int}(marginRow),
+        )
+    end
+    
     function Parameter()
         return Parameter(
             12.,
@@ -39,7 +64,8 @@ module ListAutomatization
     function copy_Parameter(p::Parameter)
         p_new= Parameter()
         for k in fieldnames(Parameter)
-            setproperty!(p_new, k, getproperty(p, k)) 
+            getproperty(p_new, k).value = getproperty(p, k).value
+            getproperty(p_new, k).enabled = getproperty(p, k).enabled
         end
         return p_new
     end
@@ -48,7 +74,18 @@ module ListAutomatization
     function json_update!(p::Parameter, json::String)
         json = JSON3.parse(json)
         for (k, v) in json
-            setproperty!(p, k, v)
+            if k == :rowNameNumber
+                p.cellHeight.value = round(sheetHeight/v, digits = 2)
+                p.cellHeight.enabled = true
+            elseif k in fieldnames(Parameter)
+                if getproperty(p, k).enabled
+                    @warn "The value of the parameter $k is already fixed at : $(getproperty(p, k).value), this will be changed to $v"
+                end
+                getproperty(p, k).value = v
+                getproperty(p, k).enabled = true
+            else
+                @warn "The parameter $k is not defined and won't be applied"
+            end
         end
     end
 
@@ -71,9 +108,6 @@ module ListAutomatization
     #min_alpha = lowercase.(alpha)
     initRow = 4
     initCol = 1
-
-    const sheetWidth = 190
-    const sheetHeight = 830
 
     #= Ici je veux réaliser un pruning des paramètres
         * Ce qui serait génial, c'est d'avoir un objet paramètre avec chaque élément initilaisé à "null"
@@ -115,13 +149,9 @@ module ListAutomatization
         return s - (col-2)*maxRowCount
     end
 
-    function parameter_pruning(df::DataFrame, p_base::Parameter, p_utilisateur::Parameter, unfix_filednames; verbose::Bool = false)
+    function parameter_pruning(df::DataFrame, p_base::Parameter, p_utilisateur::Parameter; verbose::Bool = false)
         p_final = copy_Parameter(p_utilisateur)
         cpt = 0
-
-        for item in unfix_filednames
-            setproperty!(p_final, item, getproperty(p_base, item))
-        end
 
         change = []
         stop = false
@@ -131,57 +161,59 @@ module ListAutomatization
             println("Try number: $cpt")
             # Ici, calcul de si ca passe, si oui, on prune, si non, on stop, on va voir pour le retour en arrière si stop après :)
 
-            maxRowCount = div(sheetHeight, p_final.cellHeight+0.25)
+            maxRowCount = div(sheetHeight, p_final.cellHeight.value)
             L = TempAlphaInfo[]
             for letter in alpha
                 sub_df = df[[elt[1] in letter for elt in df.nom], :]
-                push!(L, TempAlphaInfo(letter, [(elt.nom, elt.colonne) for elt in eachrow(sub_df)], max(p_final.marginRow, p_final.marginRow+size(sub_df, 1))))
+                push!(L, TempAlphaInfo(letter, [(elt.nom, elt.colonne) for elt in eachrow(sub_df)], max(p_final.marginRow.value, p_final.marginRow.value+size(sub_df, 1))))
             end
 
             nb_empty = checkEmptyCellLast(L, Int(maxRowCount-3))
-            println("Check empyt cell last: $nb_empty")
+            println("Check empty cell last: $nb_empty")
             println("Changes: $change")
             println("Max row count: $maxRowCount\n")
             if nb_empty < 0
                 @assert length(change) > 0 "No possible configuration for the excel with the given parameter"
                 if length(change)==2
                     stop = true
-                elseif change[1][1] == :marginRow
-                    p_final.marginRow = change[1][2]
+                elseif (change[1][1] == :marginRow) && !(p_final.cellHeight.enabled)
+                    p_final.marginRow.value = change[1][2]
                     change = []
-                    push!(change, (:cellHeight, p_final.cellHeight))
-                    p_final.cellHeight += 1
+                    push!(change, (:cellHeight, p_final.cellHeight.value))
+                    p_final.cellHeight.value += 1
                 else
                     stop = true
                 end
             else
                 # Ici, le changement de paramètre, la base du pruning
+                # BUG !!!!!!!!!!!!!!!!!!!!!!!!!
+                # Quand cellHeight enabled, il augmente la taille des cases quand même ! 
                 change = []
-                if (:marginRow in unfix_filednames) && p_final.marginRow >= 5
-                    push!(change, (:marginRow, p_final.marginRow))
-                    p_final.marginRow = p_base.marginRow
+                if !p_final.marginRow.enabled && p_final.marginRow.value >= 5
+                    push!(change, (:marginRow, p_final.marginRow.value))
+                    p_final.marginRow.value = p_base.marginRow.value
                     
-                    if !(:cellHeight in unfix_filednames)
+                    if  p_final.cellHeight.enabled
                         stop = true
                     else
-                        push!(change, (:cellHeight, p_final.cellHeight))
-                        p_final.cellHeight += 1
+                        push!(change, (:cellHeight, p_final.cellHeight.value))
+                        p_final.cellHeight.value += 1
                     end
-                elseif (:marginRow in unfix_filednames)
-                    push!(change, (:marginRow, p_final.marginRow))
-                    p_final.marginRow += 1
+                elseif !p_final.marginRow.enabled
+                    push!(change, (:marginRow, p_final.marginRow.value))
+                    p_final.marginRow.value += 1
                 else
-                    if !(:cellHeight in unfix_filednames)
+                    if p_final.cellHeight.enabled
                         stop = true
                     else
-                        push!(change, (:cellHeight, p_final.cellHeight))
-                        p_final.cellHeight += 1
+                        push!(change, (:cellHeight, p_final.cellHeight.value))
+                        p_final.cellHeight.value += 1
                     end
                 end
             end
         end
         for (k, v) in change
-            setproperty!(p_final, k, v)
+            getproperty(p_final, k).value = v
         end
         return p_final
     end
@@ -193,29 +225,20 @@ module ListAutomatization
         end
         sort!(df, :nom)
 
-        p_utilisateur = null_Parameter()
-        println("Avant Json update")
+        p_utilisateur = Parameter()
+        verbose && println("Avant Json update")
         json_update!(p_utilisateur, parameters)
 
-        p_null = null_Parameter()
-
-        unfix_filednames = Symbol[]
-        for field in fieldnames(Parameter)
-            if getproperty(p_utilisateur, field) == getproperty(p_null, field)
-                push!(unfix_filednames, field)
-            end
-        end
-
-        println("Avant Parameter pruning")
-        p_pruned = parameter_pruning(df, p_base, p_utilisateur, unfix_filednames, verbose = verbose)
+        verbose && println("Avant Parameter pruning")
+        p_pruned = parameter_pruning(df, p_base, p_utilisateur, verbose = verbose)
 
 
-        maxRowCount = Int(div(sheetHeight, p_pruned.cellHeight))
-        verbose && println(sheetHeight, " - ", p_pruned.cellHeight)
+        maxRowCount = Int(div(sheetHeight, p_pruned.cellHeight.value))
+        verbose && println(sheetHeight, " - ", p_pruned.cellHeight.value)
         L = TempAlphaInfo[]
         for letter in alpha
             sub_df = df[[elt[1] in letter for elt in df.nom], :]
-            push!(L, TempAlphaInfo(letter, [(elt.nom, elt.colonne) for elt in eachrow(sub_df)], max(p_pruned.marginRow, p_pruned.marginRow+size(sub_df, 1))))
+            push!(L, TempAlphaInfo(letter, [(elt.nom, elt.colonne) for elt in eachrow(sub_df)], max(p_pruned.marginRow.value, p_pruned.marginRow.value+size(sub_df, 1))))
         end
 
         if name_exitFile == ""
@@ -227,8 +250,8 @@ module ListAutomatization
             rm(name_exitFile, force = true)
         end
 
-        println("Avant cp")
-        println(pwd())
+        verbose && println("Avant cp")
+        verbose && println(pwd())
         cp(joinpath(
             @__DIR__,
             "..",
@@ -238,12 +261,12 @@ module ListAutomatization
 
         chmod(name_exitFile, 0o777)
 
-        println("Avant création xlsx")
-        println("FILE EXISTS: ", isfile(name_exitFile))
-        println("FILE WRITABLE: ", iswritable(name_exitFile))
-        println("DIR WRITABLE: ", iswritable(dirname(name_exitFile)))
-        println("FILE READONLY: ", isreadonly(name_exitFile))
-        println("PERMISSIONS: ", stat(name_exitFile), "\n", "PERMISSIONS: ", uperm(name_exitFile))
+        verbose && println("Avant création xlsx")
+        verbose && println("FILE EXISTS: ", isfile(name_exitFile))
+        verbose && println("FILE WRITABLE: ", iswritable(name_exitFile))
+        verbose && println("DIR WRITABLE: ", iswritable(dirname(name_exitFile)))
+        verbose && println("FILE READONLY: ", isreadonly(name_exitFile))
+        verbose && println("PERMISSIONS: ", stat(name_exitFile), "\n", "PERMISSIONS: ", uperm(name_exitFile))
         XLSX.openxlsx(name_exitFile, mode = "rw") do exit_file
             exit_file = exit_file[1]
 
@@ -254,15 +277,15 @@ module ListAutomatization
                 end
             end
 
-            XLSX.setRowHeight(exit_file, "A1:A$maxRowCount"; height=p_pruned.cellHeight-0.25)
-            XLSX.setColumnWidth(exit_file, getcell(1, 1); width=p_pruned.cellNameLength)
-            XLSX.setColumnWidth(exit_file, getcell(1, 3); width=p_pruned.cellNameLength)
-            XLSX.setColumnWidth(exit_file, getcell(1, 5); width=p_pruned.cellNameLength)
-            XLSX.setColumnWidth(exit_file, 8; width=p_pruned.cellTrashLength)
-            XLSX.setColumnWidth(exit_file, 7; width=p_pruned.cellMarginLength)
-            XLSX.setColumnWidth(exit_file, getcell(1, 2); width=p_pruned.cellColLength)
-            XLSX.setColumnWidth(exit_file, getcell(1, 4); width=p_pruned.cellColLength)
-            XLSX.setColumnWidth(exit_file, getcell(1, 6); width=p_pruned.cellColLength)
+            XLSX.setRowHeight(exit_file, "A1:A$maxRowCount"; height=p_pruned.cellHeight.value-0.25)
+            XLSX.setColumnWidth(exit_file, getcell(1, 1); width=p_pruned.cellNameLength.value)
+            XLSX.setColumnWidth(exit_file, getcell(1, 3); width=p_pruned.cellNameLength.value)
+            XLSX.setColumnWidth(exit_file, getcell(1, 5); width=p_pruned.cellNameLength.value)
+            XLSX.setColumnWidth(exit_file, 8; width=p_pruned.cellTrashLength.value)
+            XLSX.setColumnWidth(exit_file, 7; width=p_pruned.cellMarginLength.value)
+            XLSX.setColumnWidth(exit_file, getcell(1, 2); width=p_pruned.cellColLength.value)
+            XLSX.setColumnWidth(exit_file, getcell(1, 4); width=p_pruned.cellColLength.value)
+            XLSX.setColumnWidth(exit_file, getcell(1, 6); width=p_pruned.cellColLength.value)
 
             #TODO: Tricky part, this code is template exclusive (Use of Hard cell reference), change that automaticaly would be a pain in the ass
             row, col = 4, 1
@@ -325,10 +348,10 @@ module ListAutomatization
             XLSX.setFill(exit_file, getcell(row, col); pattern = "solid", fgColor = "orange")
             verbose && println(row, col)
             XLSX.setFont(exit_file, getcell(row, col); bold = true)
-            println("Fin de la création du Excel")
+            verbose && println("Fin de la création du Excel")
         end
-        println("Fin de _main")
-        println("FILE CLOSED")
+        verbose && println("Fin de _main")
+        verbose && println("FILE CLOSED")
         return name_exitFile
     end
 
