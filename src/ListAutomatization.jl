@@ -76,14 +76,14 @@ module ListAutomatization
             println(k)
             if k == :rowNameNumber
                 println("In row name number")
-                p.cellHeight.value = round(sheetHeight/v, digits = 2)
+                p.cellHeight.value = round(sheetHeight/parse(Int, v), digits = 2)
                 p.cellHeight.enabled = true
                 println(p.cellHeight)
             elseif k in fieldnames(Parameter)
                 if getproperty(p, k).enabled
                     @warn "The value of the parameter $k is already fixed at : $(getproperty(p, k).value), this will be changed to $v"
                 end
-                getproperty(p, k).value = v
+                getproperty(p, k).value = parse(typrof(getproperty(p, k).value), v)
                 getproperty(p, k).enabled = true
             else
                 @warn "The parameter $k is not defined and won't be applied"
