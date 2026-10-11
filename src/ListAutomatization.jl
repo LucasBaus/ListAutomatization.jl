@@ -71,7 +71,7 @@ module ListAutomatization
     end
 
     # Ensuite ici, une fonction modifiant un paramètre en fonction d'un JSON
-    function json_update!(p::Parameter, json::String)
+    function json_update!(p::Parameter, json::JSON3.Object)
         for (k, v) in json
             println(k)
             if k == :rowNameNumber
